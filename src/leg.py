@@ -102,9 +102,19 @@ class Leg:
         # Draw calf
         self.draw_limb(surface, self.knee_pos, self.ankle_pos, self.calf_width, self.calf_color)
         
+        # Determine foot direction based on ankle position relative to hip
+        # We want the foot to point away from the hip
+        hip_to_ankle = self.ankle_pos - self.hip_pos
+        
+        # Check if ankle is to the right of hip
+        if self.ankle_pos.x > self.hip_pos.x:
+            # Ankle is to the right of hip, so foot points right
+            foot_end = (self.ankle_pos.x + self.foot_length, self.ankle_pos.y)
+        else:
+            # Ankle is to the left of hip, so foot points left
+            foot_end = (self.ankle_pos.x - self.foot_length, self.ankle_pos.y)
+        
         # Draw foot
-        foot_angle = math.atan2(0, self.foot_length)  # Foot is horizontal
-        foot_end = (self.ankle_pos.x + self.foot_length, self.ankle_pos.y)
         self.draw_limb(surface, self.ankle_pos, foot_end, self.foot_height, self.foot_color)
         
         # Draw joints
@@ -129,14 +139,25 @@ class Leg:
         pygame.draw.polygon(surface, color, [p1, p2, p3, p4])
         
     def check_footbag_collision(self, footbag):
-        # Check collision with foot
-        foot_end = (self.ankle_pos.x + self.foot_length, self.ankle_pos.y)
-        foot_rect = pygame.Rect(
-            self.ankle_pos.x, 
-            self.ankle_pos.y - self.foot_height/2,
-            self.foot_length,
-            self.foot_height
-        )
+        # Determine foot direction based on ankle position relative to hip
+        if self.ankle_pos.x > self.hip_pos.x:
+            # Ankle is to the right of hip, so foot points right
+            foot_end = (self.ankle_pos.x + self.foot_length, self.ankle_pos.y)
+            foot_rect = pygame.Rect(
+                self.ankle_pos.x, 
+                self.ankle_pos.y - self.foot_height/2,
+                self.foot_length,
+                self.foot_height
+            )
+        else:
+            # Ankle is to the left of hip, so foot points left
+            foot_end = (self.ankle_pos.x - self.foot_length, self.ankle_pos.y)
+            foot_rect = pygame.Rect(
+                self.ankle_pos.x - self.foot_length, 
+                self.ankle_pos.y - self.foot_height/2,
+                self.foot_length,
+                self.foot_height
+            )
         
         # Inflate rect slightly for better collision detection
         foot_rect.inflate_ip(5, 5)
@@ -146,10 +167,12 @@ class Leg:
         
         if foot_rect.colliderect(footbag_rect):
             # Calculate bounce direction and velocity
-            bounce_direction = pygame.Vector2(footbag.position) - pygame.Vector2(
+            # Get the center of the foot based on foot_end
+            foot_center = pygame.Vector2(
                 (self.ankle_pos.x + foot_end[0]) / 2, 
                 self.ankle_pos.y
             )
+            bounce_direction = pygame.Vector2(footbag.position) - foot_center
             bounce_direction.normalize_ip()
             
             # Bounce velocity depends on the leg's movement speed, with reduced bounciness
